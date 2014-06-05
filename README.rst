@@ -19,7 +19,7 @@ deegree 3.3.9 `patch`_ to enable deegree-tilestore-cassandra.
 
 .. _Patch: https://gist.github.com/anonymous/57b9cfef044ddcde3551
 
-python script [`link`_] to populate cassandra with tiles from `TileCache`_ disk store
+`tileCache2Cassandra.py`_ python script to populate cassandra with tiles from `TileCache`_ disk store
 
-.. _link: https://gist.github.com/martin-vi/dc174d3c45358387b4ee
+.. _tileCache2Cassandra.py: https://gist.github.com/martin-vi/dc174d3c45358387b4ee
 .. _TileCache: http://tilecache.org/
