@@ -132,7 +132,6 @@ public class CassandraDB {
         } else {
             ksp = HFactory.createKeyspace( keyspaceName, myCluster );
         }
-        ksp.setConsistencyLevelPolicy(null);
         
         for ( ColumnFamilyDefinition cfDef : keyspaceDef.getCfDefs() ) {
             if ( ! cfDef.getName().equals( columnName ) ) continue;
@@ -146,17 +145,10 @@ public class CassandraDB {
         // Create a customized Consistency Level
         ConfigurableConsistencyLevel configurableConsistencyLevel = new ConfigurableConsistencyLevel();
         Map<String, HConsistencyLevel> clmap = new HashMap<String, HConsistencyLevel>();
-
         clmap.put(columnName, HConsistencyLevel.ONE);
-
         configurableConsistencyLevel.setReadCfConsistencyLevels(clmap);
         configurableConsistencyLevel.setWriteCfConsistencyLevels(clmap);
-        
         ksp.setConsistencyLevelPolicy(configurableConsistencyLevel);
-
-        // Then let the keyspace know
-        //HFactory.createKeyspace(columnName, myCluster, configurableConsistencyLevel);
-
 
         template = new ThriftColumnFamilyTemplate<String, String>(
                 ksp,
