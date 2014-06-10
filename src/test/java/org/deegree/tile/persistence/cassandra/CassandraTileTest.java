@@ -75,7 +75,11 @@ public class CassandraTileTest {
         when( mockedMatrixSet.getTileDataLevel( "00" ) ).thenReturn( mockedMatrix );
         when( mockedMatrixSet.getTileDataLevels() ).thenReturn( Collections.singletonList( mockedMatrix ) );
 
-        cassandra = new CassandraDB("", "", "");
+        cassandra = new CassandraDB(
+                "172.17.0.2:9160,172.17.0.3",
+                "Test Cluster",
+                "tilecache",
+                "tilecache");
         cassandra.setTileMatrixSet(mockedMatrixSet);
     }
     

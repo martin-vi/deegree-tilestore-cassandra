@@ -5,9 +5,9 @@
   configVersion="3.2.0">
 
   <TileDataSet>
-    <Identifier>cassa</Identifier>
-    <TileMatrixSetId>InspireCrs84Quad</TileMatrixSetId>
-    <CassandraHost>vagrant</CassandraHost>
+    <Identifier>cassandra</Identifier>
+    <TileMatrixSetId>inspirecrs84quad</TileMatrixSetId>
+    <CassandraHosts>localhost:9160,otherhost:9160</CassandraHosts>
     <CassandraCluster>Test Cluster</CassandraCluster>
     <CassandraKeyspace>tilecache</CassandraKeyspace>
     <CassandraColumnfamily>tilecache</CassandraColumnfamily>

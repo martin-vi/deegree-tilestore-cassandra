@@ -31,7 +31,7 @@
                 </annotation>
               </element>
               <element name="TileMatrixSetId" type="string" />
-              <element name="CassandraHost" type="string" />
+              <element name="CassandraHosts" type="string" />
               <element name="CassandraCluster" type="string" />
               <element name="CassandraKeyspace" type="string" />
               <element name="CassandraColumnfamily" type="string" />

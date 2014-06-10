@@ -47,9 +47,9 @@ import java.util.Map;
 import org.deegree.commons.config.DeegreeWorkspace;
 import org.deegree.commons.config.ResourceInitException;
 import org.deegree.commons.config.ResourceManager;
+import static org.deegree.commons.xml.jaxb.JAXBUtils.unmarshall;
 import org.deegree.cs.coordinatesystems.ICRS;
 import org.deegree.cs.persistence.CRSManager;
-import org.deegree.tile.persistence.cassandra.db.CassandraDB;
 import org.deegree.geometry.Envelope;
 import org.deegree.geometry.SimpleGeometryFactory;
 import org.deegree.geometry.metadata.SpatialMetadata;
@@ -59,8 +59,12 @@ import org.deegree.tile.TileDataSet;
 import org.deegree.tile.TileMatrix;
 import org.deegree.tile.TileMatrixSet;
 import org.deegree.tile.persistence.TileStoreProvider;
+import org.deegree.tile.persistence.cassandra.db.CassandraDB;
+import org.deegree.tile.persistence.cassandra.jaxb.CassandraTileStoreJAXB;
 import org.deegree.tile.tilematrixset.TileMatrixSetManager;
 import org.slf4j.Logger;
+import static org.slf4j.LoggerFactory.getLogger;
+import static org.slf4j.LoggerFactory.getLogger;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
@@ -92,38 +96,38 @@ public class CassandraTileStoreProvider implements TileStoreProvider {
     public CassandraTileStore create( URL configUrl ) throws ResourceInitException {
         try {
 
+            CassandraTileStoreJAXB config = (CassandraTileStoreJAXB) unmarshall( JAXB_PACKAGE, CONFIG_SCHEMA,
+                                                                                   configUrl, workspace );
+            
             TileMatrixSetManager mgr = workspace.getSubsystemManager( TileMatrixSetManager.class );
 
             Map<String, TileDataSet> map = new HashMap<String, TileDataSet>();
-
-            ICRS crs = CRSManager.getCRSRef( "EPSG:4326" );
-            double[] min = new double[] { -180.0, -90.0 };
-            double[] max = new double[] {  180.0,  90.0 };
             
-            SimpleGeometryFactory fac = new SimpleGeometryFactory();
-            Envelope env = fac.createEnvelope( min, max, crs );
-            SpatialMetadata spatialMetadata = new SpatialMetadata( env, singletonList( crs ) );
+            for ( CassandraTileStoreJAXB.TileDataSet tds : config.getTileDataSet() ) {
+                String id = tds.getIdentifier();
+                String tmsId = tds.getTileMatrixSetId();
+                
+                CassandraDB cassaDB = new CassandraDB(
+                        tds.getCassandraHosts(),
+                        tds.getCassandraCluster(),
+                        tds.getCassandraKeyspace(),
+                        tds.getCassandraColumnfamily() );                
+                
+                TileMatrixSet tms = mgr.get( tmsId );
+                if ( tms == null ) {
+                    throw new ResourceInitException( "No tile matrix set with id " + tmsId + " is available!" );
+                }                
+                
+                List<TileDataLevel> list = new ArrayList<TileDataLevel>( tms.getTileMatrices().size() );
+                
+                for ( TileMatrix tm : tms.getTileMatrices() ) {
+                    list.add(new CassandraTileDataLevel(tm, cassaDB));
+                }
 
-            String id = "cassandrawmts";
-            String tmsId = "inspirecrs84quad";
-
-            /* setup tilematrix */
-            TileMatrixSet tms = mgr.get( tmsId );
-            if ( tms == null ) {
-                throw new ResourceInitException( "No tile matrix set with id " + tmsId + " is available!" );
+                DefaultTileDataSet dataset = new DefaultTileDataSet( list, tms, "image/png" );
+                cassaDB.setTileMatrixSet( dataset );
+                map.put( id, dataset );
             }
-            
-            List<TileDataLevel> list = new ArrayList<TileDataLevel>( tms.getTileMatrices().size() );
-            // ToDo, pass Cassandra Arguments here
-            CassandraDB cassaDB = new CassandraDB( "hostname", "keyspace", "columnfamily" );
-
-            for ( TileMatrix tm : tms.getTileMatrices() ) {
-                list.add(new CassandraTileDataLevel(tm, cassaDB));
-            }
-
-            DefaultTileDataSet dataset = new DefaultTileDataSet( list, tms, "image/png" );
-            cassaDB.setTileMatrixSet( dataset );
-            map.put( id, dataset );
 
             return new CassandraTileStore( map );
         } catch ( ResourceInitException e ) {

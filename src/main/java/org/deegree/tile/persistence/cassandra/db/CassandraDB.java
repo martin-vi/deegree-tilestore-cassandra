@@ -37,11 +37,16 @@
 package org.deegree.tile.persistence.cassandra.db;
 
 import java.text.DecimalFormat;
+import java.util.HashMap;
+import java.util.Map;
+import me.prettyprint.cassandra.model.ConfigurableConsistencyLevel;
 import me.prettyprint.cassandra.serializers.StringSerializer;
+import me.prettyprint.cassandra.service.CassandraHostConfigurator;
 import me.prettyprint.cassandra.service.template.ColumnFamilyResult;
 import me.prettyprint.cassandra.service.template.ColumnFamilyTemplate;
 import me.prettyprint.cassandra.service.template.ThriftColumnFamilyTemplate;
 import me.prettyprint.hector.api.Cluster;
+import me.prettyprint.hector.api.HConsistencyLevel;
 import me.prettyprint.hector.api.Keyspace;
 import me.prettyprint.hector.api.ddl.ColumnFamilyDefinition;
 import me.prettyprint.hector.api.ddl.KeyspaceDefinition;
@@ -73,15 +78,15 @@ public class CassandraDB {
     private Keyspace ksp;
     private ColumnFamilyDefinition colfam = null;
     private ColumnFamilyTemplate<String, String> template;
-
-    private final static String cassandraHost = "vagrant:9160";
-    private final static String clusterName = "Test Cluster";
-    private final static String keyspaceName = "tilecache";
-    private final static String columnName = "tilecache";
     
     private TileDataSet set;
     
     private final static String separatorChar = "|";
+    
+    private final String hosts;
+    private final String keyspaceName;
+    private final String columnName;
+    private final String clusterName;
 
     /**
      * Creates a new {@link CassandraDB} instance.
@@ -93,11 +98,11 @@ public class CassandraDB {
      * @param columnFamily
      *          used columnFamily, must not be <code>null</code>
      */
-    public CassandraDB( String host, String keyspace, String columnFamily ) {
-        // ToDo
-        //this.host = host;
-        //this.keyspace = keyspace;
-        //this.columnFamily = columnFamily;
+    public CassandraDB( String host, String cluster, String keyspace, String columnFamily ) {
+        this.hosts = host;
+        this.clusterName = cluster;
+        this.keyspaceName = keyspace;
+        this.columnName = columnFamily;
         
         this.connect();
     }
@@ -116,7 +121,10 @@ public class CassandraDB {
      * Connects to Cassandra Database.
      */
     private void connect() {
-        myCluster = HFactory.getOrCreateCluster( clusterName, cassandraHost );
+        CassandraHostConfigurator cassandraHostConfigurator = 
+                new CassandraHostConfigurator(this.hosts);
+        
+        myCluster = HFactory.getOrCreateCluster( clusterName, cassandraHostConfigurator );
         
         keyspaceDef = myCluster.describeKeyspace( keyspaceName );
         if (keyspaceDef == null) {
@@ -124,6 +132,7 @@ public class CassandraDB {
         } else {
             ksp = HFactory.createKeyspace( keyspaceName, myCluster );
         }
+        ksp.setConsistencyLevelPolicy(null);
         
         for ( ColumnFamilyDefinition cfDef : keyspaceDef.getCfDefs() ) {
             if ( ! cfDef.getName().equals( columnName ) ) continue;
@@ -133,7 +142,22 @@ public class CassandraDB {
         if ( colfam == null ) {
             throw new TileIOException( "ColumnFamily " + columnName + " not exsisting." );
         }
+
+        // Create a customized Consistency Level
+        ConfigurableConsistencyLevel configurableConsistencyLevel = new ConfigurableConsistencyLevel();
+        Map<String, HConsistencyLevel> clmap = new HashMap<String, HConsistencyLevel>();
+
+        clmap.put(columnName, HConsistencyLevel.ONE);
+
+        configurableConsistencyLevel.setReadCfConsistencyLevels(clmap);
+        configurableConsistencyLevel.setWriteCfConsistencyLevels(clmap);
         
+        ksp.setConsistencyLevelPolicy(configurableConsistencyLevel);
+
+        // Then let the keyspace know
+        //HFactory.createKeyspace(columnName, myCluster, configurableConsistencyLevel);
+
+
         template = new ThriftColumnFamilyTemplate<String, String>(
                 ksp,
                 colfam.getName(),
