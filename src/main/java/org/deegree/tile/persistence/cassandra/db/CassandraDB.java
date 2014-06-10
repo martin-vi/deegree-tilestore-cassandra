@@ -143,7 +143,7 @@ public class CassandraDB {
         }
 
         this.setReadConsistencyLevel(HConsistencyLevel.ONE);
-        this.setReadConsistencyLevel(HConsistencyLevel.ONE);
+        this.setWriteConsistencyLevel(HConsistencyLevel.ONE);
 
         template = new ThriftColumnFamilyTemplate<String, String>(
                 ksp,
