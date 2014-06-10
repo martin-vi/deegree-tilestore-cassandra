@@ -40,19 +40,14 @@ import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
-import static java.util.Collections.singletonList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import me.prettyprint.hector.api.HConsistencyLevel;
 import org.deegree.commons.config.DeegreeWorkspace;
 import org.deegree.commons.config.ResourceInitException;
 import org.deegree.commons.config.ResourceManager;
 import static org.deegree.commons.xml.jaxb.JAXBUtils.unmarshall;
-import org.deegree.cs.coordinatesystems.ICRS;
-import org.deegree.cs.persistence.CRSManager;
-import org.deegree.geometry.Envelope;
-import org.deegree.geometry.SimpleGeometryFactory;
-import org.deegree.geometry.metadata.SpatialMetadata;
 import org.deegree.tile.DefaultTileDataSet;
 import org.deegree.tile.TileDataLevel;
 import org.deegree.tile.TileDataSet;
@@ -63,8 +58,6 @@ import org.deegree.tile.persistence.cassandra.db.CassandraDB;
 import org.deegree.tile.persistence.cassandra.jaxb.CassandraTileStoreJAXB;
 import org.deegree.tile.tilematrixset.TileMatrixSetManager;
 import org.slf4j.Logger;
-import static org.slf4j.LoggerFactory.getLogger;
-import static org.slf4j.LoggerFactory.getLogger;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
@@ -113,6 +106,30 @@ public class CassandraTileStoreProvider implements TileStoreProvider {
                         tds.getCassandraKeyspace(),
                         tds.getCassandraColumnfamily() );                
                 
+                if ( tds.getReadConsistencyLevel() == null ) {
+                } else if ( tds.getReadConsistencyLevel().equals( "ALL" ) ) {
+                    cassaDB.setReadConsistencyLevel(HConsistencyLevel.ALL);
+                } else if ( tds.getReadConsistencyLevel().equals( "QUORUM" ) ) {
+                    cassaDB.setReadConsistencyLevel(HConsistencyLevel.QUORUM);
+                } else if ( tds.getReadConsistencyLevel().equals( "TWO" ) ) {
+                    cassaDB.setReadConsistencyLevel(HConsistencyLevel.TWO);
+                } else if ( tds.getReadConsistencyLevel().equals( "THREE" ) ) {
+                    cassaDB.setReadConsistencyLevel(HConsistencyLevel.THREE);
+                }
+
+                if ( tds.getWriteConsistencyLevel() == null ) {
+                } else if (tds.getWriteConsistencyLevel().equals("ALL")) {
+                    cassaDB.setWriteConsistencyLevel(HConsistencyLevel.ALL);
+                } else if (tds.getWriteConsistencyLevel().equals("QUORUM")) {
+                    cassaDB.setWriteConsistencyLevel(HConsistencyLevel.QUORUM);
+                } else if (tds.getWriteConsistencyLevel().equals("TWO")) {
+                    cassaDB.setWriteConsistencyLevel(HConsistencyLevel.TWO);
+                } else if (tds.getWriteConsistencyLevel().equals("THREE")) {
+                    cassaDB.setWriteConsistencyLevel(HConsistencyLevel.THREE);
+                } else if (tds.getWriteConsistencyLevel().equals("ANY")) {
+                    cassaDB.setWriteConsistencyLevel(HConsistencyLevel.ANY);
+                }
+
                 TileMatrixSet tms = mgr.get( tmsId );
                 if ( tms == null ) {
                     throw new ResourceInitException( "No tile matrix set with id " + tmsId + " is available!" );

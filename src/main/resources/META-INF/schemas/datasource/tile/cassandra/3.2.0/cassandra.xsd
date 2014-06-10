@@ -35,6 +35,30 @@
               <element name="CassandraCluster" type="string" />
               <element name="CassandraKeyspace" type="string" />
               <element name="CassandraColumnfamily" type="string" />
+              <element name="ReadConsistencyLevel" default="ONE" minOccurs="0" maxOccurs="1">
+                <simpleType>
+                    <restriction base="string">
+                        <enumeration value="ALL" />
+                        <enumeration value="ONE" />
+                        <enumeration value="QUORUM" />
+                        <enumeration value="TWO" />
+                        <enumeration value="THREE" />
+                    </restriction>
+                </simpleType>
+              </element>
+              <element name="WriteConsistencyLevel" default="ONE" minOccurs="0" maxOccurs="1">
+                  <simpleType>
+                      <restriction base="string">
+                          <enumeration value="ANY" />
+                          <enumeration value="ALL" />
+                          <enumeration value="ANY" />
+                          <enumeration value="ONE" />
+                          <enumeration value="QUORUM" />
+                          <enumeration value="THREE" />
+                          <enumeration value="TWO" />
+                      </restriction>
+                  </simpleType>
+              </element>
             </sequence>
           </complexType>
         </element>

@@ -142,13 +142,8 @@ public class CassandraDB {
             throw new TileIOException( "ColumnFamily " + columnName + " not exsisting." );
         }
 
-        // Create a customized Consistency Level
-        ConfigurableConsistencyLevel configurableConsistencyLevel = new ConfigurableConsistencyLevel();
-        Map<String, HConsistencyLevel> clmap = new HashMap<String, HConsistencyLevel>();
-        clmap.put(columnName, HConsistencyLevel.ONE);
-        configurableConsistencyLevel.setReadCfConsistencyLevels(clmap);
-        configurableConsistencyLevel.setWriteCfConsistencyLevels(clmap);
-        ksp.setConsistencyLevelPolicy(configurableConsistencyLevel);
+        this.setReadConsistencyLevel(HConsistencyLevel.ONE);
+        this.setReadConsistencyLevel(HConsistencyLevel.ONE);
 
         template = new ThriftColumnFamilyTemplate<String, String>(
                 ksp,
@@ -176,7 +171,25 @@ public class CassandraDB {
         
         return res;
     }
-    
+
+    public void setReadConsistencyLevel(HConsistencyLevel clvl) {
+        ConfigurableConsistencyLevel configurableConsistencyLevel = new ConfigurableConsistencyLevel();
+        Map<String, HConsistencyLevel> clmap = new HashMap<String, HConsistencyLevel>();
+        clmap.put(columnName, clvl);
+        configurableConsistencyLevel.setReadCfConsistencyLevels(clmap);
+
+        ksp.setConsistencyLevelPolicy(configurableConsistencyLevel);
+    }
+
+    public void setWriteConsistencyLevel(HConsistencyLevel clvl) {
+        ConfigurableConsistencyLevel configurableConsistencyLevel = new ConfigurableConsistencyLevel();
+        Map<String, HConsistencyLevel> clmap = new HashMap<String, HConsistencyLevel>();
+        clmap.put(columnName, clvl);
+        configurableConsistencyLevel.setWriteCfConsistencyLevels(clmap);
+
+        ksp.setConsistencyLevelPolicy(configurableConsistencyLevel);
+    }
+
     /**
      * Returns the image file for the specified {@link org.deegree.tile.TileDataLevel} and tile indexes.
      * 
