@@ -100,36 +100,41 @@ public class CassandraTileStoreProvider implements TileStoreProvider {
                 String id = tds.getIdentifier();
                 String tmsId = tds.getTileMatrixSetId();
                 
+                HConsistencyLevel readCfConsistencyLvl = HConsistencyLevel.ONE;
+                if ( tds.getReadConsistencyLevel() == null ) {
+                } else if ( tds.getReadConsistencyLevel().equals( "ALL" ) ) {
+                    readCfConsistencyLvl = HConsistencyLevel.ALL;
+                } else if ( tds.getReadConsistencyLevel().equals( "QUORUM" ) ) {
+                    readCfConsistencyLvl = HConsistencyLevel.QUORUM;
+                } else if ( tds.getReadConsistencyLevel().equals( "TWO" ) ) {
+                    readCfConsistencyLvl = HConsistencyLevel.TWO;
+                } else if ( tds.getReadConsistencyLevel().equals( "THREE" ) ) {
+                    readCfConsistencyLvl = HConsistencyLevel.THREE;
+                }
+
+                HConsistencyLevel writeCfConsistencyLvl = HConsistencyLevel.ANY;
+                if ( tds.getWriteConsistencyLevel() == null ) {
+                } else if (tds.getWriteConsistencyLevel().equals("ALL")) {
+                    writeCfConsistencyLvl = HConsistencyLevel.ALL;
+                } else if (tds.getWriteConsistencyLevel().equals("QUORUM")) {
+                    writeCfConsistencyLvl = HConsistencyLevel.QUORUM;
+                } else if (tds.getWriteConsistencyLevel().equals("TWO")) {
+                    writeCfConsistencyLvl = HConsistencyLevel.TWO;
+                } else if (tds.getWriteConsistencyLevel().equals("THREE")) {
+                    writeCfConsistencyLvl = HConsistencyLevel.THREE;
+                } else if (tds.getWriteConsistencyLevel().equals("ANY")) {
+                    writeCfConsistencyLvl = HConsistencyLevel.ANY;
+                }
+
                 CassandraDB cassaDB = new CassandraDB(
                         tds.getCassandraHosts(),
                         tds.getCassandraCluster(),
                         tds.getCassandraKeyspace(),
-                        tds.getCassandraColumnfamily() );                
+                        tds.getCassandraColumnfamily() );
+
+                cassaDB.setConsistencyLevels(readCfConsistencyLvl, writeCfConsistencyLvl);
+
                 
-                if ( tds.getReadConsistencyLevel() == null ) {
-                } else if ( tds.getReadConsistencyLevel().equals( "ALL" ) ) {
-                    cassaDB.setReadConsistencyLevel(HConsistencyLevel.ALL);
-                } else if ( tds.getReadConsistencyLevel().equals( "QUORUM" ) ) {
-                    cassaDB.setReadConsistencyLevel(HConsistencyLevel.QUORUM);
-                } else if ( tds.getReadConsistencyLevel().equals( "TWO" ) ) {
-                    cassaDB.setReadConsistencyLevel(HConsistencyLevel.TWO);
-                } else if ( tds.getReadConsistencyLevel().equals( "THREE" ) ) {
-                    cassaDB.setReadConsistencyLevel(HConsistencyLevel.THREE);
-                }
-
-                if ( tds.getWriteConsistencyLevel() == null ) {
-                } else if (tds.getWriteConsistencyLevel().equals("ALL")) {
-                    cassaDB.setWriteConsistencyLevel(HConsistencyLevel.ALL);
-                } else if (tds.getWriteConsistencyLevel().equals("QUORUM")) {
-                    cassaDB.setWriteConsistencyLevel(HConsistencyLevel.QUORUM);
-                } else if (tds.getWriteConsistencyLevel().equals("TWO")) {
-                    cassaDB.setWriteConsistencyLevel(HConsistencyLevel.TWO);
-                } else if (tds.getWriteConsistencyLevel().equals("THREE")) {
-                    cassaDB.setWriteConsistencyLevel(HConsistencyLevel.THREE);
-                } else if (tds.getWriteConsistencyLevel().equals("ANY")) {
-                    cassaDB.setWriteConsistencyLevel(HConsistencyLevel.ANY);
-                }
-
                 TileMatrixSet tms = mgr.get( tmsId );
                 if ( tms == null ) {
                     throw new ResourceInitException( "No tile matrix set with id " + tmsId + " is available!" );

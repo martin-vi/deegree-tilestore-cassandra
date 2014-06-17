@@ -40,6 +40,7 @@ import java.math.BigInteger;
 import java.util.Collections;
 import static java.util.Collections.singletonList;
 import static junit.framework.Assert.assertEquals;
+import me.prettyprint.hector.api.HConsistencyLevel;
 import org.deegree.cs.coordinatesystems.ICRS;
 import org.deegree.cs.persistence.CRSManager;
 import org.deegree.tile.persistence.cassandra.db.CassandraDB;
@@ -79,7 +80,7 @@ public class CassandraTileTest {
                 "172.17.0.2:9160,172.17.0.3",
                 "Test Cluster",
                 "tilecache",
-                "tilecache");
+                "tilecache" );
         cassandra.setTileMatrixSet(mockedMatrixSet);
     }
     

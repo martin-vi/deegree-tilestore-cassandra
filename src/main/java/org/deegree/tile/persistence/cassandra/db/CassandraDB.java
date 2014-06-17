@@ -93,6 +93,8 @@ public class CassandraDB {
      * 
      * @param host
      *          cassandra database hostname (and port) to connect, must not be <code>null</code>
+     * @param cluster
+     *          define used cluster name
      * @param keyspace
      *          used keyspace, must not be <code>null</code>
      * @param columnFamily
@@ -124,6 +126,9 @@ public class CassandraDB {
         CassandraHostConfigurator cassandraHostConfigurator = 
                 new CassandraHostConfigurator(this.hosts);
         
+        cassandraHostConfigurator.setAutoDiscoverHosts(true);
+        cassandraHostConfigurator.setAutoDiscoveryDelayInSeconds(30);
+
         myCluster = HFactory.getOrCreateCluster( clusterName, cassandraHostConfigurator );
         
         keyspaceDef = myCluster.describeKeyspace( keyspaceName );
@@ -141,9 +146,6 @@ public class CassandraDB {
         if ( colfam == null ) {
             throw new TileIOException( "ColumnFamily " + columnName + " not exsisting." );
         }
-
-        this.setReadConsistencyLevel(HConsistencyLevel.ONE);
-        this.setWriteConsistencyLevel(HConsistencyLevel.ONE);
 
         template = new ThriftColumnFamilyTemplate<String, String>(
                 ksp,
@@ -172,21 +174,15 @@ public class CassandraDB {
         return res;
     }
 
-    public void setReadConsistencyLevel(HConsistencyLevel clvl) {
+    public void setConsistencyLevels(HConsistencyLevel readCfConsistencyLvl, HConsistencyLevel writeCfConsistencyLvl) {
         ConfigurableConsistencyLevel configurableConsistencyLevel = new ConfigurableConsistencyLevel();
-        Map<String, HConsistencyLevel> clmap = new HashMap<String, HConsistencyLevel>();
-        clmap.put(columnName, clvl);
-        configurableConsistencyLevel.setReadCfConsistencyLevels(clmap);
+        Map<String, HConsistencyLevel> rclmap = new HashMap<String, HConsistencyLevel>();
+        Map<String, HConsistencyLevel> wclmap = new HashMap<String, HConsistencyLevel>();
+        rclmap.put(columnName, readCfConsistencyLvl);
+        wclmap.put(columnName, writeCfConsistencyLvl);        
 
-        ksp.setConsistencyLevelPolicy(configurableConsistencyLevel);
-    }
-
-    public void setWriteConsistencyLevel(HConsistencyLevel clvl) {
-        ConfigurableConsistencyLevel configurableConsistencyLevel = new ConfigurableConsistencyLevel();
-        Map<String, HConsistencyLevel> clmap = new HashMap<String, HConsistencyLevel>();
-        clmap.put(columnName, clvl);
-        configurableConsistencyLevel.setWriteCfConsistencyLevels(clmap);
-
+        configurableConsistencyLevel.setReadCfConsistencyLevels(rclmap);
+        configurableConsistencyLevel.setWriteCfConsistencyLevels(wclmap);
         ksp.setConsistencyLevelPolicy(configurableConsistencyLevel);
     }
 
@@ -262,6 +258,13 @@ public class CassandraDB {
     private long getTileCacheYIndex( TileDataLevel tileMatrix, long y ) {
         // TileCache's y-axis is inverted
         return tileMatrix.getMetadata().getNumTilesY() - 1 - y;
-    }    
+    }
     
+    protected void finalize() throws Throwable
+    {
+      //do finalization here
+      super.finalize(); //not necessary if extending Object.
+      
+    }
+   
 }
