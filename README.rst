@@ -5,7 +5,7 @@ deegree-tilestore-cassandra
 *caution: work in progress*
 
 A deegree wmts tilestore implementation with cassandra as database backend.
-Using the client library `Hector`_ as client.
+Using the client library `datastax/java-driver`_ as client.
 
 Why cassandra?
  * speed
@@ -13,7 +13,7 @@ Why cassandra?
  * scaling
  * cloud integration
 
-.. _Hector: https://github.com/hector-client/hector
+.. _datastax/java-driver: https://github.com/datastax/java-driver
 
 deegree 3.3.9 `patch`_ to enable deegree-tilestore-cassandra.
 
