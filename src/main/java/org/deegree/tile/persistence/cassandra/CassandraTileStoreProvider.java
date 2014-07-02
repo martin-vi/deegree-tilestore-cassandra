@@ -43,7 +43,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import me.prettyprint.hector.api.HConsistencyLevel;
+
 import org.deegree.commons.config.DeegreeWorkspace;
 import org.deegree.commons.config.ResourceInitException;
 import org.deegree.commons.config.ResourceManager;
@@ -57,6 +57,7 @@ import org.deegree.tile.persistence.TileStoreProvider;
 import org.deegree.tile.persistence.cassandra.db.CassandraDB;
 import org.deegree.tile.persistence.cassandra.jaxb.CassandraTileStoreJAXB;
 import org.deegree.tile.tilematrixset.TileMatrixSetManager;
+
 import org.slf4j.Logger;
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -100,45 +101,17 @@ public class CassandraTileStoreProvider implements TileStoreProvider {
                 String id = tds.getIdentifier();
                 String tmsId = tds.getTileMatrixSetId();
                 
-                HConsistencyLevel readCfConsistencyLvl = HConsistencyLevel.ONE;
-                if ( tds.getReadConsistencyLevel() == null ) {
-                } else if ( tds.getReadConsistencyLevel().equals( "ALL" ) ) {
-                    readCfConsistencyLvl = HConsistencyLevel.ALL;
-                } else if ( tds.getReadConsistencyLevel().equals( "QUORUM" ) ) {
-                    readCfConsistencyLvl = HConsistencyLevel.QUORUM;
-                } else if ( tds.getReadConsistencyLevel().equals( "TWO" ) ) {
-                    readCfConsistencyLvl = HConsistencyLevel.TWO;
-                } else if ( tds.getReadConsistencyLevel().equals( "THREE" ) ) {
-                    readCfConsistencyLvl = HConsistencyLevel.THREE;
-                }
-
-                HConsistencyLevel writeCfConsistencyLvl = HConsistencyLevel.ANY;
-                if ( tds.getWriteConsistencyLevel() == null ) {
-                } else if (tds.getWriteConsistencyLevel().equals("ALL")) {
-                    writeCfConsistencyLvl = HConsistencyLevel.ALL;
-                } else if (tds.getWriteConsistencyLevel().equals("QUORUM")) {
-                    writeCfConsistencyLvl = HConsistencyLevel.QUORUM;
-                } else if (tds.getWriteConsistencyLevel().equals("TWO")) {
-                    writeCfConsistencyLvl = HConsistencyLevel.TWO;
-                } else if (tds.getWriteConsistencyLevel().equals("THREE")) {
-                    writeCfConsistencyLvl = HConsistencyLevel.THREE;
-                } else if (tds.getWriteConsistencyLevel().equals("ANY")) {
-                    writeCfConsistencyLvl = HConsistencyLevel.ANY;
-                }
-
+                // ToDo read and set ConsistencyLevel, default ONE
+                
                 CassandraDB cassaDB = new CassandraDB(
                         tds.getCassandraHosts(),
-                        tds.getCassandraCluster(),
                         tds.getCassandraKeyspace(),
                         tds.getCassandraColumnfamily() );
-
-                cassaDB.setConsistencyLevels(readCfConsistencyLvl, writeCfConsistencyLvl);
-
                 
                 TileMatrixSet tms = mgr.get( tmsId );
                 if ( tms == null ) {
                     throw new ResourceInitException( "No tile matrix set with id " + tmsId + " is available!" );
-                }                
+                }
                 
                 List<TileDataLevel> list = new ArrayList<TileDataLevel>( tms.getTileMatrices().size() );
                 

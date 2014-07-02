@@ -7,8 +7,7 @@
   <TileDataSet>
     <Identifier>cassandra</Identifier>
     <TileMatrixSetId>inspirecrs84quad</TileMatrixSetId>
-    <CassandraHosts>localhost:9160,otherhost:9160</CassandraHosts>
-    <CassandraCluster>Test Cluster</CassandraCluster>
+    <CassandraHosts>localhost,otherhost</CassandraHosts>
     <CassandraKeyspace>tilecache</CassandraKeyspace>
     <CassandraColumnfamily>tilecache</CassandraColumnfamily>
   </TileDataSet>

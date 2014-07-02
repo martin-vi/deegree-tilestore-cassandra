@@ -36,22 +36,26 @@
 
 package org.deegree.tile.persistence.cassandra.db;
 
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.ConsistencyLevel;
+import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Session;
+import com.datastax.driver.core.SimpleStatement;
+import com.datastax.driver.core.Statement;
+import com.datastax.driver.core.policies.ConstantReconnectionPolicy;
+import com.datastax.driver.core.policies.DowngradingConsistencyRetryPolicy;
+import com.datastax.driver.core.policies.LatencyAwarePolicy;
+import com.datastax.driver.core.policies.RoundRobinPolicy;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.text.DecimalFormat;
-import java.util.HashMap;
-import java.util.Map;
-import me.prettyprint.cassandra.model.ConfigurableConsistencyLevel;
-import me.prettyprint.cassandra.serializers.StringSerializer;
-import me.prettyprint.cassandra.service.CassandraHostConfigurator;
-import me.prettyprint.cassandra.service.template.ColumnFamilyResult;
-import me.prettyprint.cassandra.service.template.ColumnFamilyTemplate;
-import me.prettyprint.cassandra.service.template.ThriftColumnFamilyTemplate;
-import me.prettyprint.hector.api.Cluster;
-import me.prettyprint.hector.api.HConsistencyLevel;
-import me.prettyprint.hector.api.Keyspace;
-import me.prettyprint.hector.api.ddl.ColumnFamilyDefinition;
-import me.prettyprint.hector.api.ddl.KeyspaceDefinition;
-import me.prettyprint.hector.api.exceptions.HectorException;
-import me.prettyprint.hector.api.factory.HFactory;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.deegree.tile.TileDataLevel;
 import org.deegree.tile.TileDataSet;
 import org.deegree.tile.TileIOException;
@@ -62,7 +66,7 @@ import org.deegree.tile.TileIOException;
  * {@link DiskLayout} implementation.<br/>
  * <br/>
  * tilecache {
- *  key: zz|xxx|xxx|xxx|yyy|yyy|yyy { filetype: png, img: [BYTE DATA], ... }
+ *  key: png|zz|xxx|xxx|xxx|yyy|yyy|yyy { img: [BLOB], lru [long], ... }
  *  ...
  * }
  * 
@@ -73,39 +77,38 @@ import org.deegree.tile.TileIOException;
  */
 public class CassandraDB {
 
-    private Cluster myCluster;
-    private KeyspaceDefinition keyspaceDef;
-    private Keyspace ksp;
-    private ColumnFamilyDefinition colfam = null;
-    private ColumnFamilyTemplate<String, String> template;
+    // cassandra instance variables
+    private Cluster cluster;
+    private Session session;    
     
-    private TileDataSet set;
-    
-    private final static String separatorChar = "|";
-    
+    // configure variables
     private final String hosts;
     private final String keyspaceName;
-    private final String columnName;
-    private final String clusterName;
+    private final String columnFamily;
+    private String fileType = "png";
+    private boolean LRUenabled = true;
+    
+    // wmts settings
+    private TileDataSet set;
+    
+    // static variables
+    private final static String separatorChar = "|";
 
     /**
      * Creates a new {@link CassandraDB} instance.
      * 
-     * @param host
-     *          cassandra database hostname (and port) to connect, must not be <code>null</code>
-     * @param cluster
-     *          define used cluster name
+     * @param hosts
+     *          cassandra database hostnames (and port) to connect, must not be <code>null</code>
      * @param keyspace
      *          used keyspace, must not be <code>null</code>
      * @param columnFamily
      *          used columnFamily, must not be <code>null</code>
      */
-    public CassandraDB( String host, String cluster, String keyspace, String columnFamily ) {
-        this.hosts = host;
-        this.clusterName = cluster;
+    public CassandraDB( String hosts, String keyspace, String columnFamily ) {
+        this.hosts = hosts;
         this.keyspaceName = keyspace;
-        this.columnName = columnFamily;
-        
+        this.columnFamily = columnFamily;
+
         this.connect();
     }
     
@@ -123,36 +126,32 @@ public class CassandraDB {
      * Connects to Cassandra Database.
      */
     private void connect() {
-        CassandraHostConfigurator cassandraHostConfigurator = 
-                new CassandraHostConfigurator(this.hosts);
         
-        cassandraHostConfigurator.setAutoDiscoverHosts(true);
-        cassandraHostConfigurator.setAutoDiscoveryDelayInSeconds(30);
+        Collection<InetAddress> hostCollection = new ArrayList<InetAddress>();
+        for ( String h : hosts.split(",") ) {
+            try {
+                hostCollection.add(InetAddress.getByName( h ) );
+            } catch (UnknownHostException ex) {
+                Logger.getLogger(CassandraDB.class.getName()).log(Level.SEVERE, null, ex);
+                continue;
+            }
+        }
+        
+        cluster = Cluster.builder()
+                .addContactPoints(hostCollection)
+                .withLoadBalancingPolicy(new LatencyAwarePolicy.Builder(new RoundRobinPolicy()).build())
+                .withRetryPolicy(DowngradingConsistencyRetryPolicy.INSTANCE)
+                .withReconnectionPolicy(new ConstantReconnectionPolicy(100L))                
+                .build();
+        
+        // ToDO
+        // Check ... Metadata metadata = cluster.getMetadata();
+        // Test for ColumnFamily!
 
-        myCluster = HFactory.getOrCreateCluster( clusterName, cassandraHostConfigurator );
-        
-        keyspaceDef = myCluster.describeKeyspace( keyspaceName );
-        if (keyspaceDef == null) {
+        session = cluster.connect(keyspaceName);
+        if (session == null) {
             throw new TileIOException( "Keyspace " + keyspaceName + " not exsisting." );
-        } else {
-            ksp = HFactory.createKeyspace( keyspaceName, myCluster );
-        }
-        
-        for ( ColumnFamilyDefinition cfDef : keyspaceDef.getCfDefs() ) {
-            if ( ! cfDef.getName().equals( columnName ) ) continue;
-            colfam = cfDef;
-            break;
-        }
-        if ( colfam == null ) {
-            throw new TileIOException( "ColumnFamily " + columnName + " not exsisting." );
-        }
-
-        template = new ThriftColumnFamilyTemplate<String, String>(
-                ksp,
-                colfam.getName(),
-                StringSerializer.get(),
-                StringSerializer.get()
-        );
+        }        
     }
     
     /**
@@ -162,28 +161,21 @@ public class CassandraDB {
      *          Key to identify and access a Cassandra row.
      * @return
      */
-    private ColumnFamilyResult<String, String> getRow( String key ) {
-        ColumnFamilyResult<String, String> res = null;
-        
+    private Row getRow( String key ) {
+        Row res = null;
+
+        // ToDo configurable ConsistencyLevel
+        Statement getTileStatement = new SimpleStatement(
+                "SELECT * FROM " + columnFamily
+                + " WHERE key = \'" + key + "\'" )
+                .setConsistencyLevel(ConsistencyLevel.ONE);        
         try {
-            res = template.queryColumns( key );            
-        } catch ( HectorException e ) {
+            res = session.execute(getTileStatement).one();
+        } catch ( Exception e ) {
             throw new TileIOException( "Error while querying cassandra db, " + e.getMessage() );
         }
         
         return res;
-    }
-
-    public void setConsistencyLevels(HConsistencyLevel readCfConsistencyLvl, HConsistencyLevel writeCfConsistencyLvl) {
-        ConfigurableConsistencyLevel configurableConsistencyLevel = new ConfigurableConsistencyLevel();
-        Map<String, HConsistencyLevel> rclmap = new HashMap<String, HConsistencyLevel>();
-        Map<String, HConsistencyLevel> wclmap = new HashMap<String, HConsistencyLevel>();
-        rclmap.put(columnName, readCfConsistencyLvl);
-        wclmap.put(columnName, writeCfConsistencyLvl);        
-
-        configurableConsistencyLevel.setReadCfConsistencyLevels(rclmap);
-        configurableConsistencyLevel.setWriteCfConsistencyLevels(wclmap);
-        ksp.setConsistencyLevelPolicy(configurableConsistencyLevel);
     }
 
     /**
@@ -197,7 +189,7 @@ public class CassandraDB {
      *            row index of the tile (starting at 0)
      * @return tile file or <code>null</code> if the tile matrix does not exist (or indexes are out of range)
      */
-    public byte[] resolv( String matrixId, long x, long y ) {
+    public ByteBuffer resolv( String matrixId, long x, long y ) {
         TileDataLevel tileMatrix = set.getTileDataLevel( matrixId );
         if ( tileMatrix == null ) {
             return null;
@@ -212,17 +204,35 @@ public class CassandraDB {
         String columnFileNamePart = getColumnFileNamePart( x );
         String rowFileNamePart = getRowFileNamePart( y, tileMatrix );
 
+        rowKey.append( fileType );
+        rowKey.append( separatorChar );
         rowKey.append( levelDirectory );
         rowKey.append( separatorChar );
         rowKey.append( columnFileNamePart );
+        rowKey.append( separatorChar );        
         rowKey.append( rowFileNamePart );
 
-        ColumnFamilyResult<String, String> row = this.getRow( rowKey.toString() );
+        Row row = this.getRow( rowKey.toString() );
         if ( row == null ) {
             return null;
         }
+
+        if ( LRUenabled ) {
+            Statement updateLRUStatement = new SimpleStatement(
+                    "UPDATE " + columnFamily 
+                            +" SET lru = " + System.currentTimeMillis()
+                            + "WHERE key = \'" + rowKey.toString() + "\'" )
+                .setConsistencyLevel(ConsistencyLevel.ONE);
+
+            try {
+                session.execute(updateLRUStatement);
+            } catch ( Exception e ) {
+                System.err.println("Problem writing lru value for key " + rowKey.toString()
+                    + ", Error: " + e );
+            }
+        }
         
-        return row.getByteArray( "img" );
+        return row.getBytes( "img" );
     }
     
      private String getLevelDirectory( TileDataLevel tileMatrix ) {
@@ -239,7 +249,6 @@ public class CassandraDB {
         sb.append( formatter.format( x / 1000 % 1000 ) );
         sb.append( separatorChar );
         sb.append( formatter.format( x % 1000 ) );
-        sb.append( separatorChar );
         return sb.toString();
     }
 
@@ -260,11 +269,21 @@ public class CassandraDB {
         return tileMatrix.getMetadata().getNumTilesY() - 1 - y;
     }
     
-    protected void finalize() throws Throwable
-    {
-      //do finalization here
-      super.finalize(); //not necessary if extending Object.
-      
+    // ToDo JavaDoc
+    public void setFileType( String fileType ) {
+        this.fileType = fileType;
     }
-   
+    
+    public String getFileType() {
+        return fileType;
+    }
+    
+    public void enableLRU() {
+        this.LRUenabled = true;
+    }
+    
+    public void disableLRU() {
+        this.LRUenabled = false;
+    }
+
 }

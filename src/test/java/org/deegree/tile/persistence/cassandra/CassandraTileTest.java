@@ -39,8 +39,6 @@ package org.deegree.tile.persistence.cassandra;
 import java.math.BigInteger;
 import java.util.Collections;
 import static java.util.Collections.singletonList;
-import static junit.framework.Assert.assertEquals;
-import me.prettyprint.hector.api.HConsistencyLevel;
 import org.deegree.cs.coordinatesystems.ICRS;
 import org.deegree.cs.persistence.CRSManager;
 import org.deegree.tile.persistence.cassandra.db.CassandraDB;
@@ -51,7 +49,6 @@ import org.deegree.tile.TileDataLevel;
 import org.deegree.tile.TileDataSet;
 import org.deegree.tile.TileMatrix;
 import org.junit.Before;
-import org.junit.Test;
 import org.mockito.Mockito;
 import static org.mockito.Mockito.when;
 
@@ -77,23 +74,10 @@ public class CassandraTileTest {
         when( mockedMatrixSet.getTileDataLevels() ).thenReturn( Collections.singletonList( mockedMatrix ) );
 
         cassandra = new CassandraDB(
-                "172.17.0.2:9160,172.17.0.3",
-                "Test Cluster",
+                "cassandra1.docker,ca2.docker",
                 "tilecache",
                 "tilecache" );
         cassandra.setTileMatrixSet(mockedMatrixSet);
     }
-    
-//    @Test
-//    public void testResolv() {
-//        byte[] test = cassandra.resolv("00", 18782353, 786347862);  
-//            
-//        String key = "13|000|008|818|000|006|428";
-//        
-//        byte[] imgArray = cassandra.getRow(key).getByteArray("img");
-//        String recievedKey = cassandra.getRow(key).getKey();
-//        assertEquals(key, recievedKey);
-//        
-//    }
     
 }

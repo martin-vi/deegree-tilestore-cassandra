@@ -40,8 +40,13 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+
 import javax.imageio.ImageIO;
+
 import static org.apache.commons.io.IOUtils.closeQuietly;
+
 import org.deegree.feature.FeatureCollection;
 import org.deegree.geometry.Envelope;
 import org.deegree.tile.Tile;
@@ -59,7 +64,7 @@ public class CassandraTile implements Tile {
     
     private final Envelope bbox;
     
-    private final byte[] tileImage;
+    private final ByteBuffer tileImage;
     
     /**
     * Creates a new {@link CassandraTile} instance.
@@ -69,7 +74,7 @@ public class CassandraTile implements Tile {
     * @param tileImage
     *           byte arry containing the image or <code>null</code>
     */
-    CassandraTile( Envelope bbox, byte[] tileImage ) {
+    CassandraTile( Envelope bbox, ByteBuffer tileImage ) {
         this.bbox = bbox;
         this.tileImage = tileImage;
     }
@@ -92,8 +97,20 @@ public class CassandraTile implements Tile {
         if ( this.tileImage == null ) {
             throw new TileIOException( "Error no tile in cassandra found or db connection failed" );
         }
-        ByteArrayInputStream bis = new ByteArrayInputStream(this.tileImage);
-        return bis;
+
+        // convert: ByteBuffer -> byte [] -> ByteArryInputStream
+        byte[] byteArray = null; 
+        if (tileImage.hasArray()) {
+            final byte[] array = tileImage.array();
+            final int arrayOffset = tileImage.arrayOffset();
+            byteArray =  Arrays.copyOfRange(array, arrayOffset + tileImage.position(),
+                    arrayOffset + tileImage.limit());
+        } else {
+            byteArray = null;
+        }
+        ByteArrayInputStream bStream = new ByteArrayInputStream(byteArray);
+
+        return bStream;
     }
 
     @Override

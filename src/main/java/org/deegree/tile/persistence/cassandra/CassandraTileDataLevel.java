@@ -36,11 +36,14 @@
 
 package org.deegree.tile.persistence.cassandra;
 
+import java.nio.ByteBuffer;
+
 import org.deegree.tile.Tile;
 import org.deegree.tile.TileDataLevel;
 import org.deegree.tile.TileMatrix;
 import org.deegree.tile.persistence.cassandra.db.CassandraDB;
 import org.deegree.geometry.Envelope;
+
 import static org.deegree.tile.Tiles.calcTileEnvelope;
 
 /**
@@ -81,7 +84,7 @@ public class CassandraTileDataLevel implements TileDataLevel {
             return null;
         }
         Envelope bbox = calcTileEnvelope( metadata, x, y );
-        byte[] tileImage = cassadb.resolv( metadata.getIdentifier(), x, y);
+        ByteBuffer tileImage = cassadb.resolv( metadata.getIdentifier(), x, y);
         return new CassandraTile( bbox, tileImage );
     }
 

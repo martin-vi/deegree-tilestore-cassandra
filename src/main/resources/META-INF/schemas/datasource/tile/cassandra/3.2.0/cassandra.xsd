@@ -32,7 +32,6 @@
               </element>
               <element name="TileMatrixSetId" type="string" />
               <element name="CassandraHosts" type="string" />
-              <element name="CassandraCluster" type="string" />
               <element name="CassandraKeyspace" type="string" />
               <element name="CassandraColumnfamily" type="string" />
               <element name="ReadConsistencyLevel" default="ONE" minOccurs="0" maxOccurs="1">
