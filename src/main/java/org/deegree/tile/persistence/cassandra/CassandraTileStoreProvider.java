@@ -54,6 +54,7 @@ import org.deegree.tile.TileDataSet;
 import org.deegree.tile.TileMatrix;
 import org.deegree.tile.TileMatrixSet;
 import org.deegree.tile.persistence.TileStoreProvider;
+import org.deegree.tile.persistence.cassandra.db.CassandraConnector;
 import org.deegree.tile.persistence.cassandra.db.CassandraDB;
 import org.deegree.tile.persistence.cassandra.jaxb.CassandraTileStoreJAXB;
 import org.deegree.tile.tilematrixset.TileMatrixSetManager;
@@ -96,17 +97,16 @@ public class CassandraTileStoreProvider implements TileStoreProvider {
             TileMatrixSetManager mgr = workspace.getSubsystemManager( TileMatrixSetManager.class );
 
             Map<String, TileDataSet> map = new HashMap<String, TileDataSet>();
+                        
+            // ToDo read and set ConsistencyLevel, default ONE
+            CassandraDB cassaDB = new CassandraDB(
+                    config.getCassandraHosts(),
+                    config.getCassandraKeyspace() 
+            );
             
             for ( CassandraTileStoreJAXB.TileDataSet tds : config.getTileDataSet() ) {
                 String id = tds.getIdentifier();
                 String tmsId = tds.getTileMatrixSetId();
-                
-                // ToDo read and set ConsistencyLevel, default ONE
-                
-                CassandraDB cassaDB = new CassandraDB(
-                        tds.getCassandraHosts(),
-                        tds.getCassandraKeyspace(),
-                        tds.getCassandraColumnfamily() );
                 
                 TileMatrixSet tms = mgr.get( tmsId );
                 if ( tms == null ) {
@@ -115,12 +115,15 @@ public class CassandraTileStoreProvider implements TileStoreProvider {
                 
                 List<TileDataLevel> list = new ArrayList<TileDataLevel>( tms.getTileMatrices().size() );
                 
+                String columnFamily = tds.getCassandraColumnfamily();
+                CassandraConnector caConnector = new CassandraConnector(cassaDB, columnFamily);
                 for ( TileMatrix tm : tms.getTileMatrices() ) {
-                    list.add(new CassandraTileDataLevel(tm, cassaDB));
+                    list.add(new CassandraTileDataLevel(tm, caConnector));
                 }
 
                 DefaultTileDataSet dataset = new DefaultTileDataSet( list, tms, "image/png" );
-                cassaDB.setTileMatrixSet( dataset );
+                caConnector.setTileDataSet(dataset);
+                
                 map.put( id, dataset );
             }
 
@@ -132,7 +135,7 @@ public class CassandraTileStoreProvider implements TileStoreProvider {
             LOG.error( msg, e );
             throw new ResourceInitException( msg, e );
         }
-    }    
+    }
     
     @SuppressWarnings("unchecked")
     @Override

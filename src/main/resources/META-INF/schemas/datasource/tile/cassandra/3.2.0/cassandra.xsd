@@ -12,10 +12,11 @@
       </jaxb:schemaBindings>
     </appinfo>
   </annotation>
+   
 
   <element name="CassandraTileStore">
     <annotation>
-      <documentation>TileStore that is backed by a directory of image files on the file system.</documentation>
+      <documentation>TileStore that is backed by a directory of image blobs in the cassandra database.</documentation>
       <appinfo>
         <jaxb:class name="CassandraTileStoreJAXB" />
       </appinfo>
@@ -31,38 +32,15 @@
                 </annotation>
               </element>
               <element name="TileMatrixSetId" type="string" />
-              <element name="CassandraHosts" type="string" />
-              <element name="CassandraKeyspace" type="string" />
               <element name="CassandraColumnfamily" type="string" />
-              <element name="ReadConsistencyLevel" default="ONE" minOccurs="0" maxOccurs="1">
-                <simpleType>
-                    <restriction base="string">
-                        <enumeration value="ALL" />
-                        <enumeration value="ONE" />
-                        <enumeration value="QUORUM" />
-                        <enumeration value="TWO" />
-                        <enumeration value="THREE" />
-                    </restriction>
-                </simpleType>
-              </element>
-              <element name="WriteConsistencyLevel" default="ONE" minOccurs="0" maxOccurs="1">
-                  <simpleType>
-                      <restriction base="string">
-                          <enumeration value="ANY" />
-                          <enumeration value="ALL" />
-                          <enumeration value="ANY" />
-                          <enumeration value="ONE" />
-                          <enumeration value="QUORUM" />
-                          <enumeration value="THREE" />
-                          <enumeration value="TWO" />
-                      </restriction>
-                  </simpleType>
-              </element>
+              <element name="writeTimestamp" type="boolean" minOccurs="0" maxOccurs="1" />
             </sequence>
           </complexType>
         </element>
       </sequence>
       <attribute name="configVersion" use="required" fixed="3.2.0" />
+      <attribute name="CassandraHosts" use="required" type="string" />
+      <attribute name="CassandraKeyspace" use="required" type="string" />            
     </complexType>
   </element>
 

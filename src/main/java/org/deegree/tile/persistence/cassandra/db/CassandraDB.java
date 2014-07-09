@@ -48,16 +48,10 @@ import com.datastax.driver.core.policies.LatencyAwarePolicy;
 import com.datastax.driver.core.policies.RoundRobinPolicy;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.deegree.tile.TileDataLevel;
-import org.deegree.tile.TileDataSet;
 import org.deegree.tile.TileIOException;
 
 /**
@@ -79,20 +73,20 @@ public class CassandraDB {
 
     // cassandra instance variables
     private Cluster cluster;
+    
     private Session session;    
     
     // configure variables
     private final String hosts;
-    private final String keyspaceName;
-    private final String columnFamily;
-    private String fileType = "png";
-    private boolean LRUenabled = true;
     
-    // wmts settings
-    private TileDataSet set;
+    private final String keyspaceName;
+    
+    private String fileType = "png";
+    
+    private boolean tileTimestamp = true;
     
     // static variables
-    private final static String separatorChar = "|";
+    private final static char separatorChar = '|';
 
     /**
      * Creates a new {@link CassandraDB} instance.
@@ -101,26 +95,13 @@ public class CassandraDB {
      *          cassandra database hostnames (and port) to connect, must not be <code>null</code>
      * @param keyspace
      *          used keyspace, must not be <code>null</code>
-     * @param columnFamily
-     *          used columnFamily, must not be <code>null</code>
      */
-    public CassandraDB( String hosts, String keyspace, String columnFamily ) {
+    public CassandraDB( String hosts, String keyspace ) {
         this.hosts = hosts;
         this.keyspaceName = keyspace;
-        this.columnFamily = columnFamily;
 
         this.connect();
     }
-    
-    /**
-     * Assigns the given {@link TileDataSet}.
-     * 
-     * @param set
-     *            tile matrix to assign, must not be <code>null</code>
-     */
-    public void setTileMatrixSet( TileDataSet set ) {
-        this.set = set;
-    }    
     
     /**
      * Connects to Cassandra Database.
@@ -159,12 +140,13 @@ public class CassandraDB {
      * 
      * @param key
      *          Key to identify and access a Cassandra row.
+     * @param columnFamily
+     * 
      * @return
      */
-    private Row getRow( String key ) {
+    public Row getRow( String key, String columnFamily ) {
         Row res = null;
 
-        // ToDo configurable ConsistencyLevel
         Statement getTileStatement = new SimpleStatement(
                 "SELECT * FROM " + columnFamily
                 + " WHERE key = \'" + key + "\'" )
@@ -174,116 +156,48 @@ public class CassandraDB {
         } catch ( Exception e ) {
             throw new TileIOException( "Error while querying cassandra db, " + e.getMessage() );
         }
+        if ( res != null && tileTimestamp == true )
+            setTileTimestamp( key, columnFamily );
         
         return res;
     }
-
-    /**
-     * Returns the image file for the specified {@link org.deegree.tile.TileDataLevel} and tile indexes.
-     * 
-     * @param matrixId
-     *            identifier of the matrix in the matrix set, must not be <code>null</code>
-     * @param x
-     *            column index of the tile (starting at 0)
-     * @param y
-     *            row index of the tile (starting at 0)
-     * @return tile file or <code>null</code> if the tile matrix does not exist (or indexes are out of range)
-     */
-    public ByteBuffer resolv( String matrixId, long x, long y ) {
-        TileDataLevel tileMatrix = set.getTileDataLevel( matrixId );
-        if ( tileMatrix == null ) {
-            return null;
-        }
-        if ( tileMatrix.getMetadata().getNumTilesX() <= x || tileMatrix.getMetadata().getNumTilesY() <= y || x < 0
-             || y < 0 ) {
-            return null;
-        }
-        
-        StringBuilder rowKey = new StringBuilder();
-        String levelDirectory = getLevelDirectory( tileMatrix );
-        String columnFileNamePart = getColumnFileNamePart( x );
-        String rowFileNamePart = getRowFileNamePart( y, tileMatrix );
-
-        rowKey.append( fileType );
-        rowKey.append( separatorChar );
-        rowKey.append( levelDirectory );
-        rowKey.append( separatorChar );
-        rowKey.append( columnFileNamePart );
-        rowKey.append( separatorChar );        
-        rowKey.append( rowFileNamePart );
-
-        Row row = this.getRow( rowKey.toString() );
-        if ( row == null ) {
-            return null;
-        }
-
-        if ( LRUenabled ) {
-            Statement updateLRUStatement = new SimpleStatement(
-                    "UPDATE " + columnFamily 
-                            +" SET lru = " + System.currentTimeMillis()
-                            + "WHERE key = \'" + rowKey.toString() + "\'" )
+    
+    private void setTileTimestamp(String key, String columnFamily) {
+        Statement updateTileTimestamp = new SimpleStatement(
+                "UPDATE " + columnFamily
+                + " SET tileTimestamp = " + System.currentTimeMillis()
+                + "WHERE key = \'" + key + "\'")
                 .setConsistencyLevel(ConsistencyLevel.ONE);
 
-            try {
-                session.execute(updateLRUStatement);
-            } catch ( Exception e ) {
-                System.err.println("Problem writing lru value for key " + rowKey.toString()
-                    + ", Error: " + e );
-            }
+        try {
+            session.execute(updateTileTimestamp);
+        } catch (Exception e) {
+            System.err.println(
+                    "Problem writing lru value for key " + key
+                    + ", Error: " + e);
         }
-        
-        return row.getBytes( "img" );
     }
     
-     private String getLevelDirectory( TileDataLevel tileMatrix ) {
-        DecimalFormat formatter = new DecimalFormat( "00" );
-        int tileMatrixIndex = set.getTileDataLevels().indexOf( tileMatrix );
-        return formatter.format( tileMatrixIndex );
+    public char getSeparatorChar() {
+        return this.separatorChar;
     }
 
-    private String getColumnFileNamePart( long x ) {
-        StringBuilder sb = new StringBuilder();
-        DecimalFormat formatter = new DecimalFormat( "000" );
-        sb.append( formatter.format( x / 1000000 ) );
-        sb.append( separatorChar );
-        sb.append( formatter.format( x / 1000 % 1000 ) );
-        sb.append( separatorChar );
-        sb.append( formatter.format( x % 1000 ) );
-        return sb.toString();
-    }
-
-    private String getRowFileNamePart( long y, TileDataLevel tileMatrix ) {
-        long tileCacheY = getTileCacheYIndex( tileMatrix, y );
-        StringBuilder sb = new StringBuilder();
-        DecimalFormat formatter = new DecimalFormat( "000" );
-        sb.append( formatter.format( tileCacheY / 1000000 ) );
-        sb.append( separatorChar );
-        sb.append( formatter.format( tileCacheY / 1000 % 1000 ) );
-        sb.append( separatorChar );
-        sb.append( formatter.format( tileCacheY % 1000 ) );
-        return sb.toString();
-    }
     
-    private long getTileCacheYIndex( TileDataLevel tileMatrix, long y ) {
-        // TileCache's y-axis is inverted
-        return tileMatrix.getMetadata().getNumTilesY() - 1 - y;
-    }
-    
-    // ToDo JavaDoc
-    public void setFileType( String fileType ) {
-        this.fileType = fileType;
-    }
-    
-    public String getFileType() {
-        return fileType;
-    }
-    
-    public void enableLRU() {
-        this.LRUenabled = true;
-    }
-    
-    public void disableLRU() {
-        this.LRUenabled = false;
-    }
+//    // ToDo JavaDoc
+//    public void setFileType(String fileType) {
+//        this.fileType = fileType;
+//    }
+//
+//    public String getFileType() {
+//        return fileType;
+//    }
+//
+//    public void enableLRU() {
+//        this.LRUenabled = true;
+//    }
+//
+//    public void disableLRU() {
+//        this.LRUenabled = false;
+//    }
 
 }

@@ -86,7 +86,7 @@ public class CassandraTile implements Tile {
             in = getAsStream();
             return ImageIO.read( in );
         } catch ( IOException e ) {
-            throw new TileIOException( "Error decoding " );
+            throw new TileIOException( "Error decoding Tile" );
         } finally {
             closeQuietly( in );
         }        
@@ -98,7 +98,6 @@ public class CassandraTile implements Tile {
             throw new TileIOException( "Error no tile in cassandra found or db connection failed" );
         }
 
-        // convert: ByteBuffer -> byte [] -> ByteArryInputStream
         byte[] byteArray = null; 
         if (tileImage.hasArray()) {
             final byte[] array = tileImage.array();

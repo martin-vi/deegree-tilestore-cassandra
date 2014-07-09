@@ -41,10 +41,10 @@ import java.nio.ByteBuffer;
 import org.deegree.tile.Tile;
 import org.deegree.tile.TileDataLevel;
 import org.deegree.tile.TileMatrix;
-import org.deegree.tile.persistence.cassandra.db.CassandraDB;
 import org.deegree.geometry.Envelope;
 
 import static org.deegree.tile.Tiles.calcTileEnvelope;
+import org.deegree.tile.persistence.cassandra.db.CassandraConnector;
 
 /**
  * {@link TileDataLevel} implementation for the {@link CassandraTileStore}.
@@ -58,19 +58,20 @@ public class CassandraTileDataLevel implements TileDataLevel {
 
     private final TileMatrix metadata;
 
-    private final CassandraDB cassadb;
+    private final CassandraConnector caConnector;
     
     /**
      * Creates a new {@link FileSystemTileDataLevel} instance.
      * 
      * @param metadata
      *            TileDataLevel metadata
-     * @param cassadb
-     *            cassandra database connection and access instance
-     */    
-    public CassandraTileDataLevel(TileMatrix metadata, CassandraDB cassadb) {
+     * @param caConnector
+     * 
+     */
+    public CassandraTileDataLevel
+        (TileMatrix metadata, CassandraConnector caConnector) {
         this.metadata = metadata;
-        this.cassadb = cassadb;
+        this.caConnector = caConnector;
     }
 
     @Override
@@ -84,7 +85,7 @@ public class CassandraTileDataLevel implements TileDataLevel {
             return null;
         }
         Envelope bbox = calcTileEnvelope( metadata, x, y );
-        ByteBuffer tileImage = cassadb.resolv( metadata.getIdentifier(), x, y);
+        ByteBuffer tileImage = caConnector.resolv( metadata.getIdentifier(), x, y);
         return new CassandraTile( bbox, tileImage );
     }
 

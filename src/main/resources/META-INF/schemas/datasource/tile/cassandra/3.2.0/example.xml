@@ -2,14 +2,15 @@
 <CassandraTileStore xmlns="http://www.deegree.org/datasource/tile/cassandra" xmlns:md="http://www.deegree.org/metadata/spatial"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://www.deegree.org/datasource/tile/cassandra http://schemas.deegree.org/datasource/tile/filesystem/3.2.0/cassandra.xsd"
-  configVersion="3.2.0">
-
+  configVersion="3.2.0"
+  CassandraHosts="host1,host2"
+  CassandraKeyspace="tilestore"
+>
+    
   <TileDataSet>
-    <Identifier>cassandra</Identifier>
+    <Identifier>cassandrawmts</Identifier>
     <TileMatrixSetId>inspirecrs84quad</TileMatrixSetId>
-    <CassandraHosts>localhost,otherhost</CassandraHosts>
-    <CassandraKeyspace>tilecache</CassandraKeyspace>
-    <CassandraColumnfamily>tilecache</CassandraColumnfamily>
+    <CassandraColumnfamily>tiles_inspirecrs84quad</CassandraColumnfamily>
   </TileDataSet>
 
 </CassandraTileStore>
