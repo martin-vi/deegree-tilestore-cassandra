@@ -64,7 +64,7 @@ public class CassandraConnector {
      * @param cassandraDB
      * @param columnFamily
      */
-    public CassandraConnector(CassandraDB cassandraDB, String columnFamily) {
+    public CassandraConnector( CassandraDB cassandraDB, String columnFamily ) {
         this.cassandraDB = cassandraDB;
         this.columnFamily = columnFamily;
     }
@@ -81,7 +81,7 @@ public class CassandraConnector {
      * Set corresponfing TileDataSet
      * @param tds
      */
-    public void setTileDataSet(TileDataSet tds) {
+    public void setTileDataSet( TileDataSet tds ) {
         this.tds = tds;
     }
     
@@ -107,10 +107,6 @@ public class CassandraConnector {
     public ByteBuffer resolv( String matrixId, long x, long y ) {
         TileDataLevel tileMatrix = tds.getTileDataLevel( matrixId );
         if ( tileMatrix == null ) {
-            return null;
-        }
-        if ( tileMatrix.getMetadata().getNumTilesX() <= x || tileMatrix.getMetadata().getNumTilesY() <= y || x < 0
-             || y < 0 ) {
             return null;
         }
         

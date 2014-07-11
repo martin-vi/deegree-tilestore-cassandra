@@ -91,14 +91,12 @@ public class CassandraTileStoreProvider implements TileStoreProvider {
     public CassandraTileStore create( URL configUrl ) throws ResourceInitException {
         try {
 
-            CassandraTileStoreJAXB config = (CassandraTileStoreJAXB) unmarshall( JAXB_PACKAGE, CONFIG_SCHEMA,
-                                                                                   configUrl, workspace );
+            CassandraTileStoreJAXB config = (CassandraTileStoreJAXB) unmarshall( JAXB_PACKAGE, CONFIG_SCHEMA, configUrl, workspace );
             
             TileMatrixSetManager mgr = workspace.getSubsystemManager( TileMatrixSetManager.class );
 
             Map<String, TileDataSet> map = new HashMap<String, TileDataSet>();
                         
-            // ToDo read and set ConsistencyLevel, default ONE
             CassandraDB cassaDB = new CassandraDB(
                     config.getCassandraHosts(),
                     config.getCassandraKeyspace() 

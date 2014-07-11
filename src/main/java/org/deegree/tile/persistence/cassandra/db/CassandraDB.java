@@ -80,10 +80,8 @@ public class CassandraDB {
     private final String hosts;
     
     private final String keyspaceName;
-    
-    private String fileType = "png";
-    
-    private boolean tileTimestamp = true;
+        
+    private final boolean tileTimestamp = true;
     
     // static variables
     private final static char separatorChar = '|';
@@ -181,23 +179,5 @@ public class CassandraDB {
     public char getSeparatorChar() {
         return this.separatorChar;
     }
-
-    
-//    // ToDo JavaDoc
-//    public void setFileType(String fileType) {
-//        this.fileType = fileType;
-//    }
-//
-//    public String getFileType() {
-//        return fileType;
-//    }
-//
-//    public void enableLRU() {
-//        this.LRUenabled = true;
-//    }
-//
-//    public void disableLRU() {
-//        this.LRUenabled = false;
-//    }
 
 }

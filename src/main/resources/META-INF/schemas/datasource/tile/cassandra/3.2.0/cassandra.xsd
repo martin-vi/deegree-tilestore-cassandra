@@ -2,9 +2,7 @@
 <schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.w3.org/2001/XMLSchema" xmlns:md="http://www.deegree.org/metadata/spatial"
   targetNamespace="http://www.deegree.org/datasource/tile/cassandra" xmlns:t="http://www.deegree.org/datasource/tile/cassandra"
   elementFormDefault="qualified" xmlns:jaxb="http://java.sun.com/xml/ns/jaxb" jaxb:version="2.1">
-
   <import namespace="http://www.deegree.org/metadata/spatial" schemaLocation="http://schemas.deegree.org/commons/spatialmetadata/3.1.0/spatialmetadata.xsd" />
-
   <annotation>
     <appinfo>
       <jaxb:schemaBindings>
@@ -12,8 +10,6 @@
       </jaxb:schemaBindings>
     </appinfo>
   </annotation>
-   
-
   <element name="CassandraTileStore">
     <annotation>
       <documentation>TileStore that is backed by a directory of image blobs in the cassandra database.</documentation>
@@ -43,5 +39,4 @@
       <attribute name="CassandraKeyspace" use="required" type="string" />            
     </complexType>
   </element>
-
 </schema>
